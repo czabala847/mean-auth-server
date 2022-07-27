@@ -44,20 +44,46 @@ const createUser = async (req, res = response) => {
       msg: "Ocurrio un error, contacte con el administrador.",
     });
   }
-
-  return res.json({
-    ok: true,
-    msg: "Crear usuario /new",
-  });
 };
 
-const login = (req, res = response) => {
+const login = async (req, res = response) => {
   const { email, password } = req.body;
 
-  return res.json({
-    ok: true,
-    msg: "Login de usuario /",
-  });
+  try {
+    const dbUser = await User.findOne({ email });
+
+    if (!dbUser) {
+      return res.status(400).json({
+        ok: false,
+        msg: "El correo no existe",
+      });
+    }
+
+    //Confirmar si el password es correcto
+    const validPassword = bcrypt.compareSync(password, dbUser.password);
+
+    if (!validPassword) {
+      return res.status(400).json({
+        ok: false,
+        msg: "El password no es válido",
+      });
+    }
+
+    //Generar JWT
+    const token = await generateJWT(dbUser.id, dbUser.name);
+
+    return res.json({
+      ok: true,
+      uid: dbUser.id,
+      token,
+    });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({
+      ok: false,
+      msg: "Ocurrio un error, contacte con el administrador",
+    });
+  }
 };
 
 const renew = (req, res = response) => {
